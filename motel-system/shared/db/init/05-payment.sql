@@ -4,6 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS payments (
   id         UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
+  branch_id  UUID          NOT NULL,
   booking_id UUID          NOT NULL, -- logical FK
   amount     DECIMAL(10,2) NOT NULL,
   method     VARCHAR(20)   CHECK (method IN ('cash','transfer','card')),

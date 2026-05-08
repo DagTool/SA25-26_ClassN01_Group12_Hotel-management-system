@@ -1,0 +1,39 @@
+### 1. Đăng ký tài khoản Admin (Sẽ tự động tạo Hotel, Branch và 10 phòng)
+POST http://localhost:3001/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "admin1",
+  "password": "password123",
+  "email": "admin1@motel.com",
+  "role": "admin",
+  "hotelName": "Motel Xanh"
+}
+
+### 2. Đăng nhập để lấy Token
+# @name login
+POST http://localhost:3001/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin1",
+  "password": "password123"
+}
+
+### 3. Lấy thông tin user hiện tại (getMe)
+# Thay chuỗi token dưới đây bằng accessToken lấy được từ bước đăng nhập
+GET http://localhost:3001/api/auth/me
+Authorization: Bearer <dán_access_token_vào_đây>
+
+### 4. Đăng ký tài khoản Nhân viên (Nhập mã mời)
+# Thay mã inviteCode bằng mã được lấy ra từ Database (bảng branches)
+POST http://localhost:3001/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "staff1",
+  "password": "password123",
+  "email": "staff1@motel.com",
+  "role": "staff",
+  "inviteCode": "INV-ABCDEF"
+}

@@ -4,6 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS services (
   id          UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
+  branch_id   UUID          NOT NULL,
   name        VARCHAR(100)  NOT NULL,
   description TEXT,
   price       DECIMAL(10,2) NOT NULL,
@@ -44,8 +45,8 @@ CREATE TRIGGER trg_booking_services_updated_at
   BEFORE UPDATE ON booking_services
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
   
-INSERT INTO services (name, description, price) VALUES
-  ('Giặt ủi', 'Dịch vụ giặt sấy quần áo', 50000),
-  ('Mì tôm trứng', 'Mì ăn liền kèm trứng', 20000),
-  ('Nước suối', 'Chai 500ml', 10000)
+INSERT INTO services (branch_id, name, description, price) VALUES
+  ('00000000-0000-0000-0000-000000000002', 'Giặt ủi', 'Dịch vụ giặt sấy quần áo', 50000),
+  ('00000000-0000-0000-0000-000000000002', 'Mì tôm trứng', 'Mì ăn liền kèm trứng', 20000),
+  ('00000000-0000-0000-0000-000000000002', 'Nước suối', 'Chai 500ml', 10000)
 ON CONFLICT DO NOTHING;

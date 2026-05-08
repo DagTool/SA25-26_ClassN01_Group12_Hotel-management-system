@@ -4,6 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS bookings (
   id           UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
+  branch_id    UUID          NOT NULL,
   room_id      UUID          NOT NULL, -- logical FK
   guest_id     UUID          NOT NULL, -- logical FK
   created_by   UUID          NOT NULL, -- logical FK
