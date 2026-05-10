@@ -3,12 +3,14 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE IF NOT EXISTS room_classes (
-  id          UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
-  branch_id   UUID          NOT NULL,
-  name        VARCHAR(50)   NOT NULL,
-  base_price  DECIMAL(10,2) NOT NULL,
-  created_at  TIMESTAMPTZ   DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ   DEFAULT NOW(),
+  id                  UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
+  branch_id           UUID          NOT NULL,
+  name                VARCHAR(50)   NOT NULL,
+  base_price          DECIMAL(10,2) NOT NULL,
+  hourly_base_price   DECIMAL(10,2) NOT NULL DEFAULT 100000, -- Giá giờ đầu
+  hourly_extra_price  DECIMAL(10,2) NOT NULL DEFAULT 30000,  -- Giá mỗi giờ tiếp theo
+  created_at          TIMESTAMPTZ   DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ   DEFAULT NOW(),
   UNIQUE (branch_id, name)
 );
 
@@ -50,10 +52,10 @@ CREATE TRIGGER trg_rooms_updated_at
 
 -- Insert dummy data
 WITH inserted_classes AS (
-  INSERT INTO room_classes (id, branch_id, name, base_price) VALUES
-    ('22222222-2222-2222-2222-222222222221', '00000000-0000-0000-0000-000000000002', 'Phòng Đơn', 200000),
-    ('22222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000002', 'Phòng Đôi', 350000),
-    ('22222222-2222-2222-2222-222222222223', '00000000-0000-0000-0000-000000000002', 'Phòng VIP', 500000)
+  INSERT INTO room_classes (id, branch_id, name, base_price, hourly_base_price, hourly_extra_price) VALUES
+    ('22222222-2222-2222-2222-222222222221', '00000000-0000-0000-0000-000000000002', 'Phòng Đơn', 200000, 80000, 20000),
+    ('22222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000002', 'Phòng Đôi', 350000, 100000, 30000),
+    ('22222222-2222-2222-2222-222222222223', '00000000-0000-0000-0000-000000000002', 'Phòng VIP', 500000, 150000, 50000)
   ON CONFLICT (branch_id, name) DO NOTHING
   RETURNING id, name
 )

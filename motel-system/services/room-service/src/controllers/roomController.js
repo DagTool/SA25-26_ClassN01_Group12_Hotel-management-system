@@ -18,14 +18,14 @@ const getRoomClasses = async (req, res, next) => {
 
 const createRoomClass = async (req, res, next) => {
   try {
-    const { branch_id, name, base_price } = req.body
+    const { branch_id, name, base_price, hourly_base_price, hourly_extra_price } = req.body
     if (!branch_id || !name || !base_price) {
       return res.status(400).json({ success: false, message: 'branch_id, name, and base_price are required' })
     }
 
     const result = await pool.query(
-      'INSERT INTO room_classes (branch_id, name, base_price) VALUES ($1, $2, $3) RETURNING *',
-      [branch_id, name, base_price]
+      'INSERT INTO room_classes (branch_id, name, base_price, hourly_base_price, hourly_extra_price) VALUES ($1, $2, $3, COALESCE($4, 100000), COALESCE($5, 30000)) RETURNING *',
+      [branch_id, name, base_price, hourly_base_price, hourly_extra_price]
     )
     res.status(201).json({ success: true, data: result.rows[0] })
   } catch (err) {
@@ -47,7 +47,7 @@ const getRooms = async (req, res, next) => {
 
     // Join with room_classes to get class name and price
     const query = `
-      SELECT r.*, c.name as class_name, c.base_price 
+      SELECT r.*, c.name as class_name, c.base_price, c.hourly_base_price, c.hourly_extra_price
       FROM rooms r
       JOIN room_classes c ON r.class_id = c.id
       WHERE r.branch_id = $1

@@ -1,0 +1,51 @@
+### ========================================
+### GUEST SERVICE (Port 3004)
+### ========================================
+
+### 1. Lấy danh sách Khách hàng
+GET http://localhost:3004/api/guests?branch_id=00000000-0000-0000-0000-000000000002
+
+### 2. Thêm khách hàng mới
+POST http://localhost:3004/api/guests
+Content-Type: application/json
+
+{
+  "branch_id": "00000000-0000-0000-0000-000000000002",
+  "full_name": "Elon Musk",
+  "phone": "0987654321",
+  "id_number": "001099123456"
+}
+
+### 3. Đưa khách vào Blacklist (Cấm túc)
+# Lấy ID của Elon Musk trả về từ bước 2 và thay vào dưới đây
+PATCH http://localhost:3004/api/guests/44444444-4444-4444-4444-444444444441/blacklist
+Content-Type: application/json
+
+{
+  "is_blacklisted": true
+}
+
+### ========================================
+### BOOKING SERVICE (Port 3005)
+### ========================================
+
+### 4. Check-in (Thuê phòng theo giờ)
+# room_id = 33333333-3333-3333-3333-333333333331 (Phòng 101 lấy từ room_db)
+# guest_id = 44444444-4444-4444-4444-444444444441 (Khách hàng từ bước trên)
+POST http://localhost:3005/api/bookings/check-in
+Content-Type: application/json
+
+{
+  "branch_id": "00000000-0000-0000-0000-000000000002",
+  "room_id": "33333333-3333-3333-3333-333333333331",
+  "guest_id": "44444444-4444-4444-4444-444444444441",
+  "created_by": "00000000-0000-0000-0000-000000000001",
+  "booking_type": "hourly"
+}
+
+### 5. Check-out (Thanh toán phòng)
+# Lấy ID booking từ bước 4 trả về và thay vào đây
+POST http://localhost:3005/api/bookings/YOUR-BOOKING-ID-HERE/check-out
+Content-Type: application/json
+
+{}

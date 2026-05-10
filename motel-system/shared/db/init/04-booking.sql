@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS bookings (
   room_id      UUID          NOT NULL, -- logical FK
   guest_id     UUID          NOT NULL, -- logical FK
   created_by   UUID          NOT NULL, -- logical FK
+  booking_type VARCHAR(20)   NOT NULL DEFAULT 'daily'
+                 CHECK (booking_type IN ('hourly', 'daily', 'overnight')),
   check_in     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
   check_out    TIMESTAMPTZ,
   status       VARCHAR(20)   DEFAULT 'active'
