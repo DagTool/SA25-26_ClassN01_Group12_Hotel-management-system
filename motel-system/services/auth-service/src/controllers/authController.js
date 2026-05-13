@@ -46,7 +46,7 @@ const register = async (req, res, next) => {
         await roomClient.query('BEGIN')
         for (let i = 1; i <= 10; i++) {
           const roomNumber = `1${i.toString().padStart(2, '0')}`
-          await roomClient.query(`INSERT INTO rooms (branch_id, room_number, floor, type, price) VALUES ($1, $2, $3, $4, $5)`, [branchId, roomNumber, 1, 'single', 200000])
+          await roomClient.query(`INSERT INTO rooms (branch_id, room_number, floor, type, base_price, hourly_base_price, hourly_extra_price) VALUES ($1, $2, $3, $4, $5, $6, $7)`, [branchId, roomNumber, 1, 'single', 200000, 60000, 20000])
         }
         await roomClient.query('COMMIT')
       } catch (err) {

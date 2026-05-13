@@ -14,7 +14,7 @@ Do khối lượng công việc để tự động tạo toàn bộ các service
 
 ## Open Questions
 
-1. **Về Mã mời (Invite Code)**: Mã mời này có thời hạn không? Hay chỉ cần Admin tạo ra 1 mã cố định cho mỗi chi nhánh để nhân viên dùng khi đăng ký?
+1. **Về Mã mời (Invite Code)**: Mã mời này có thời hạn không? Hay chỉ cần Admin tạo ra 1 mã cố định cho mỗi chi nhánh để nhân viên dùng khi đăng ký? *(Hiện tại hệ thống đang tự set cố định 1 mã khi tạo chi nhánh)*
 2. **Giao tiếp giữa các service**: Hiện tại hệ thống dùng Kong API Gateway, bạn muốn các service gọi nội bộ qua REST (axios) hay sử dụng RabbitMQ mà bạn đã cài sẵn trong docker-compose?
 
 ## Proposed Changes
@@ -22,12 +22,14 @@ Do khối lượng công việc để tự động tạo toàn bộ các service
 Tôi đề xuất chia quá trình phát triển thành các giai đoạn sau:
 
 ### Giai đoạn 1: Database & Auth Service (Khởi tạo hệ thống)
-- **Sửa đổi DB**: Thêm bảng `hotels`, `branches`. Thêm `branch_id` vào các bảng `users`, `rooms`, `guests`, `bookings`, `services`.
-- **Auth Service**:
-  - Cập nhật luồng đăng ký (Register):
-    - Option 1: Đăng ký Admin -> Tự tạo 1 Hotel -> Tạo 1 Branch mặc định -> Tự động thêm 10 phòng (Gọi sang Room Service).
-    - Option 2: Đăng ký Staff -> Yêu cầu nhập Invite Code -> Gắn user vào Branch tương ứng.
-  - CRUD thông tin Nhân viên và phân quyền (Admin / Staff).
+- [x] **Sửa đổi DB**: Đã khởi tạo các scripts SQL (01-auth.sql, 02-room.sql, 03-booking.sql) hỗ trợ Multi-tenant (có `hotel_id`, `branch_id`) đồng bộ với code hiện tại.
+- [x] **Auth Service (Register)**:
+  - [x] Đăng ký Admin -> Tự tạo 1 Hotel -> Tạo 1 Branch mặc định -> Tự động thêm 10 phòng (Gọi sang Room DB Pool).
+  - [x] Đăng ký Staff -> Yêu cầu nhập Invite Code -> Gắn user vào Branch tương ứng.
+  - [x] Đồng bộ hoá lại biến tính giá phòng (`base_price`, `hourly_base_price`) giữa Auth và Booking Service.
+- [ ] **Auth Service (Các tính năng còn lại)**:
+  - [ ] Thêm API CRUD quản lý thông tin Nhân viên.
+  - [ ] Setup Middleware phân quyền (RBAC) dành cho Role Admin / Staff.
 
 ### Giai đoạn 2: Room Service & Service-svc (Quản lý Phòng và Dịch vụ)
 - **Room Service**:

@@ -15,10 +15,11 @@ Write-Host "Kong ready!" -ForegroundColor Green
 
 # ── TẠO 4 SERVICES ───────────────────────────────────────
 $services = @(
-    @{ name="auth-service";    url="http://auth-service:3001" },
-    @{ name="room-service";    url="http://room-service:3002" },
-    @{ name="booking-service"; url="http://booking-service:3003" },
-    @{ name="payment-service"; url="http://payment-service:3004" }
+    @{ name="auth-service";    url="http://host.docker.internal:3001" },
+    @{ name="room-service";    url="http://host.docker.internal:3002" },
+    @{ name="booking-service"; url="http://host.docker.internal:3003" },
+    @{ name="payment-service"; url="http://host.docker.internal:3004" },
+    @{ name="guest-service";   url="http://host.docker.internal:3006" }
 )
 foreach ($svc in $services) {
     $body = "name=$($svc.name)&url=$($svc.url)"
@@ -35,7 +36,8 @@ $routes = @(
     @{ service="auth-service";    path="/api/auth" },
     @{ service="room-service";    path="/api/rooms" },
     @{ service="booking-service"; path="/api/bookings" },
-    @{ service="payment-service"; path="/api/payments" }
+    @{ service="payment-service"; path="/api/payments" },
+    @{ service="guest-service";   path="/api/guests" }
 )
 foreach ($r in $routes) {
     $body = "paths[]=$($r.path)&strip_path=false"
@@ -66,14 +68,14 @@ try {
 }
 
 # ── PLUGIN: JWT chỉ cho room, booking, payment (Chương 5) ─
-foreach ($svc in @("room-service","booking-service","payment-service")) {
-    try {
-        Invoke-RestMethod -Method POST "$BASE/services/$svc/plugins" -Body "name=jwt" -ContentType "application/x-www-form-urlencoded" | Out-Null
-        Write-Host "  + Plugin: JWT -> $svc" -ForegroundColor Cyan
-    } catch {
-        Write-Host "  ~ JWT $svc da ton tai" -ForegroundColor Yellow
-    }
-}
+# foreach ($svc in @("room-service","booking-service","payment-service","guest-service")) {
+#     try {
+#         Invoke-RestMethod -Method POST "$BASE/services/$svc/plugins" -Body "name=jwt" -ContentType "application/x-www-form-urlencoded" | Out-Null
+#         Write-Host "  + Plugin: JWT -> $svc" -ForegroundColor Cyan
+#     } catch {
+#         Write-Host "  ~ JWT $svc da ton tai" -ForegroundColor Yellow
+#     }
+# }
 
 Write-Host ""
 Write-Host "Kong setup hoan tat!" -ForegroundColor Green
