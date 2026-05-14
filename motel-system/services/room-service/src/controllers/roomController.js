@@ -45,13 +45,11 @@ const getRooms = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'branch_id is required' })
     }
 
-    // Join with room_classes to get class name and price
     const query = `
-      SELECT r.*, c.name as class_name, c.base_price, c.hourly_base_price, c.hourly_extra_price
-      FROM rooms r
-      JOIN room_classes c ON r.class_id = c.id
-      WHERE r.branch_id = $1
-      ORDER BY r.floor, r.room_number
+      SELECT *
+      FROM rooms
+      WHERE branch_id = $1
+      ORDER BY floor, room_number
     `
     const result = await pool.query(query, [branch_id])
     res.json({ success: true, data: result.rows })
@@ -62,14 +60,14 @@ const getRooms = async (req, res, next) => {
 
 const createRoom = async (req, res, next) => {
   try {
-    const { branch_id, class_id, room_number, floor } = req.body
-    if (!branch_id || !class_id || !room_number || floor === undefined) {
+    const { branch_id, room_number, floor, type, base_price, hourly_base_price, hourly_extra_price } = req.body
+    if (!branch_id || !room_number || floor === undefined) {
       return res.status(400).json({ success: false, message: 'Missing required fields' })
     }
 
     const result = await pool.query(
-      'INSERT INTO rooms (branch_id, class_id, room_number, floor) VALUES ($1, $2, $3, $4) RETURNING *',
-      [branch_id, class_id, room_number, floor]
+      'INSERT INTO rooms (branch_id, room_number, floor, type, base_price, hourly_base_price, hourly_extra_price) VALUES ($1, $2, $3, $4, COALESCE($5, 0), COALESCE($6, 0), COALESCE($7, 0)) RETURNING *',
+      [branch_id, room_number, floor, type, base_price, hourly_base_price, hourly_extra_price]
     )
     res.status(201).json({ success: true, data: result.rows[0] })
   } catch (err) {
@@ -83,11 +81,11 @@ const createRoom = async (req, res, next) => {
 const updateRoom = async (req, res, next) => {
   try {
     const { id } = req.params
-    const { class_id, room_number, floor } = req.body
+    const { room_number, floor, type, base_price, hourly_base_price, hourly_extra_price } = req.body
     
     const result = await pool.query(
-      'UPDATE rooms SET class_id = COALESCE($1, class_id), room_number = COALESCE($2, room_number), floor = COALESCE($3, floor) WHERE id = $4 RETURNING *',
-      [class_id, room_number, floor, id]
+      'UPDATE rooms SET room_number = COALESCE($1, room_number), floor = COALESCE($2, floor), type = COALESCE($3, type), base_price = COALESCE($4, base_price), hourly_base_price = COALESCE($5, hourly_base_price), hourly_extra_price = COALESCE($6, hourly_extra_price) WHERE id = $7 RETURNING *',
+      [room_number, floor, type, base_price, hourly_base_price, hourly_extra_price, id]
     )
 
     if (result.rows.length === 0) {

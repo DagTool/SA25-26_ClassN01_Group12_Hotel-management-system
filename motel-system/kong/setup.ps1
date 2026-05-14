@@ -13,12 +13,13 @@ while (-not $ready) {
 }
 Write-Host "Kong ready!" -ForegroundColor Green
 
-# ── TẠO 4 SERVICES ───────────────────────────────────────
+# ── TẠO CÁC SERVICES ───────────────────────────────────────
 $services = @(
     @{ name="auth-service";    url="http://host.docker.internal:3001" },
     @{ name="room-service";    url="http://host.docker.internal:3002" },
-    @{ name="booking-service"; url="http://host.docker.internal:3003" },
+    @{ name="service-svc";     url="http://host.docker.internal:3003" },
     @{ name="payment-service"; url="http://host.docker.internal:3004" },
+    @{ name="booking-service"; url="http://host.docker.internal:3005" },
     @{ name="guest-service";   url="http://host.docker.internal:3006" }
 )
 foreach ($svc in $services) {
@@ -35,8 +36,9 @@ foreach ($svc in $services) {
 $routes = @(
     @{ service="auth-service";    path="/api/auth" },
     @{ service="room-service";    path="/api/rooms" },
-    @{ service="booking-service"; path="/api/bookings" },
+    @{ service="service-svc";     path="/api/services" },
     @{ service="payment-service"; path="/api/payments" },
+    @{ service="booking-service"; path="/api/bookings" },
     @{ service="guest-service";   path="/api/guests" }
 )
 foreach ($r in $routes) {

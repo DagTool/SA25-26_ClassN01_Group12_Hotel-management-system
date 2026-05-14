@@ -67,9 +67,58 @@ const deleteService = async (req, res, next) => {
   }
 }
 
+const getBookingServices = async (req, res, next) => {
+  try {
+    const { booking_id } = req.params
+
+    const result = await pool.query(
+      `SELECT bs.*, s.name, s.price 
+       FROM booking_services bs 
+       JOIN services s ON bs.service_id = s.id 
+       WHERE bs.booking_id = $1 
+       ORDER BY bs.created_at ASC`,
+      [booking_id]
+    )
+    res.json({ success: true, data: result.rows })
+  } catch (err) {
+    next(err)
+  }
+}
+
+const addServiceToBooking = async (req, res, next) => {
+  try {
+    const { booking_id } = req.params
+    const { service_id, quantity } = req.body
+
+    if (!service_id || !quantity) {
+      return res.status(400).json({ success: false, message: 'service_id and quantity are required' })
+    }
+
+    // Get the service price
+    const serviceRes = await pool.query('SELECT price FROM services WHERE id = $1', [service_id])
+    if (serviceRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Service not found' })
+    }
+
+    const price = serviceRes.rows[0].price
+    const total_price = Number(price) * Number(quantity)
+
+    const result = await pool.query(
+      'INSERT INTO booking_services (booking_id, service_id, quantity, total_price) VALUES ($1, $2, $3, $4) RETURNING *',
+      [booking_id, service_id, quantity, total_price]
+    )
+
+    res.status(201).json({ success: true, data: result.rows[0] })
+  } catch (err) {
+    next(err)
+  }
+}
+
 module.exports = {
   getServices,
   createService,
   updateService,
-  deleteService
+  deleteService,
+  getBookingServices,
+  addServiceToBooking
 }
