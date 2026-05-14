@@ -53,7 +53,7 @@ foreach ($r in $routes) {
 
 # ── PLUGIN: CORS (global) ─────────────────────────────────
 try {
-    $body = "name=cors&config.origins[]=http://localhost:3000&config.origins[]=http://localhost:5173&config.origins[]=http://localhost:3007&config.methods[]=GET&config.methods[]=POST&config.methods[]=PUT&config.methods[]=DELETE&config.methods[]=OPTIONS&config.headers[]=Authorization&config.headers[]=Content-Type&config.credentials=true"
+    $body = "name=cors&config.origins[]=http://localhost:3000&config.origins[]=http://localhost:5173&config.origins[]=http://localhost:3007&config.methods[]=GET&config.methods[]=POST&config.methods[]=PUT&config.methods[]=PATCH&config.methods[]=DELETE&config.methods[]=OPTIONS&config.headers[]=Authorization&config.headers[]=Content-Type&config.credentials=true"
     Invoke-RestMethod -Method POST "$BASE/plugins" -Body $body -ContentType "application/x-www-form-urlencoded" | Out-Null
     Write-Host "  + Plugin: CORS (global)" -ForegroundColor Cyan
 } catch {

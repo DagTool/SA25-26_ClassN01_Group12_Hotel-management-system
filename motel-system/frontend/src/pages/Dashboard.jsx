@@ -41,8 +41,19 @@ export default function Dashboard() {
     }
   };
 
-  const handleRoomClick = (room) => {
-    if (room.status === 'cleaning' || room.status === 'maintenance') return;
+  const handleRoomClick = async (room) => {
+    if (room.status === 'cleaning' || room.status === 'maintenance') {
+      const nextStatus = room.status === 'cleaning' ? 'available' : 'available';
+      if (window.confirm(`Đánh dấu phòng ${room.room_number} đã sẵn sàng (Phòng trống)?`)) {
+        try {
+          await api.patch(`/rooms/${room.id}/status`, { status: nextStatus });
+          fetchRooms();
+        } catch (err) {
+          alert('Lỗi cập nhật trạng thái phòng');
+        }
+      }
+      return;
+    }
     setSelectedRoom(room);
     if (room.status === 'available') setIsCheckInOpen(true);
     else if (room.status === 'occupied') setIsCheckOutOpen(true);

@@ -117,11 +117,11 @@
   .badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold;
   }
-  .badge-success { @apply badge bg-success-100 text-success-700; }
-  .badge-danger  { @apply badge bg-danger-100  text-danger-700;  }
-  .badge-warning { @apply badge bg-warning-100 text-warning-700; }
-  .badge-primary { @apply badge bg-primary-100 text-primary-700; }
-  .badge-surface { @apply badge bg-surface-100 text-surface-600; }
+  .badge-success { @apply inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-success-100 text-success-700; }
+  .badge-danger  { @apply inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-danger-100  text-danger-700;  }
+  .badge-warning { @apply inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-warning-100 text-warning-700; }
+  .badge-primary { @apply inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-primary-100 text-primary-700; }
+  .badge-surface { @apply inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-surface-100 text-surface-600; }
 
   .animate-fade-in {
     animation: fadeIn 0.2s ease-out;

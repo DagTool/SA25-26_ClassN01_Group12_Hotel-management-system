@@ -5,12 +5,14 @@ import {
   DoorOpen, Plus, Edit2, Trash2, X, Loader2,
   BedDouble, RefreshCw, CheckCircle2, AlertCircle, Clock, Wrench
 } from 'lucide-react';
+import CheckInModal from '../components/CheckInModal';
+import CheckOutModal from '../components/CheckOutModal';
 
 const STATUS_OPTIONS = [
-  { value: 'available',   label: 'Phòng trống',   cls: 'badge-success' },
-  { value: 'occupied',    label: 'Đang có khách', cls: 'badge-danger'  },
-  { value: 'cleaning',    label: 'Đang dọn dẹp', cls: 'badge-warning' },
-  { value: 'maintenance', label: 'Bảo trì',       cls: 'badge-surface' },
+  { value: 'available', label: 'Phòng trống', cls: 'badge-success' },
+  { value: 'occupied', label: 'Đang có khách', cls: 'badge-danger' },
+  { value: 'cleaning', label: 'Đang dọn dẹp', cls: 'badge-warning' },
+  { value: 'maintenance', label: 'Bảo trì', cls: 'badge-surface' },
 ];
 
 const ROOM_TYPES = ['single', 'double', 'triple', 'suite', 'vip'];
@@ -37,7 +39,7 @@ function RoomModal({ room, onClose, onSaved, branchId }) {
     try {
       const payload = { ...form, floor: Number(form.floor), base_price: Number(form.base_price), hourly_base_price: Number(form.hourly_base_price), hourly_extra_price: Number(form.hourly_extra_price) };
       if (room) await api.put(`/rooms/${room.id}`, payload);
-      else       await api.post('/rooms', { branch_id: branchId, ...payload });
+      else await api.post('/rooms', { branch_id: branchId, ...payload });
       onSaved(); onClose();
     } catch (err) {
       setError(err.response?.data?.message || 'Có lỗi xảy ra');
@@ -103,6 +105,9 @@ export default function RoomsPage() {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalRoom, setModalRoom] = useState(undefined);
+  const [selectedOpRoom, setSelectedOpRoom] = useState(null);
+  const [isCheckInOpen, setIsCheckInOpen] = useState(false);
+  const [isCheckOutOpen, setIsCheckOutOpen] = useState(false);
   const [statusLoading, setStatusLoading] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(null);
   const [filterFloor, setFilterFloor] = useState('all');
@@ -118,10 +123,28 @@ export default function RoomsPage() {
 
   useEffect(() => { fetchRooms(); }, [user]);
 
-  const updateStatus = async (room, status) => {
+  const updateStatus = async (room, newStatus) => {
+    if (room.status === newStatus) return;
+
+    if (newStatus === 'occupied') {
+      if (room.status !== 'available') {
+        alert('Chỉ có thể check-in khi phòng đang trống');
+        return;
+      }
+      setSelectedOpRoom(room);
+      setIsCheckInOpen(true);
+      return;
+    }
+
+    if (room.status === 'occupied' && newStatus === 'available') {
+      setSelectedOpRoom(room);
+      setIsCheckOutOpen(true);
+      return;
+    }
+
     setStatusLoading(room.id);
     try {
-      await api.patch(`/rooms/${room.id}/status`, { status });
+      await api.patch(`/rooms/${room.id}/status`, { status: newStatus });
       fetchRooms();
     } catch (err) { console.error(err); }
     finally { setStatusLoading(null); }
@@ -139,12 +162,6 @@ export default function RoomsPage() {
 
   const floors = [...new Set(rooms.map((r) => r.floor))].sort((a, b) => a - b);
   const displayed = filterFloor === 'all' ? rooms : rooms.filter((r) => r.floor === Number(filterFloor));
-
-  const getBadge = (status) => {
-    const map = { available: 'badge-success', occupied: 'badge-danger', cleaning: 'badge-warning', maintenance: 'badge-surface' };
-    const labels = { available: 'Trống', occupied: 'Có khách', cleaning: 'Dọn dẹp', maintenance: 'Bảo trì' };
-    return <span className={`badge ${map[status] ?? 'badge-surface'}`}>{labels[status] ?? status}</span>;
-  };
 
   return (
     <div className="space-y-6">
@@ -219,10 +236,24 @@ export default function RoomsPage() {
                         value={room.status}
                         onChange={(e) => updateStatus(room, e.target.value)}
                         disabled={statusLoading === room.id}
-                        className="text-xs border border-surface-200 rounded-lg px-2 py-1 bg-surface-50 focus:outline-none focus:ring-1 focus:ring-primary-400 cursor-pointer"
+                        className={`text-xs border rounded-lg px-2 py-1 focus:outline-none cursor-pointer ${
+                          room.status === 'available' ? 'bg-success-50 text-success-700 border-success-200' :
+                          room.status === 'occupied' ? 'bg-danger-50 text-danger-700 border-danger-200' :
+                          room.status === 'cleaning' ? 'bg-warning-50 text-warning-700 border-warning-200' :
+                          'bg-surface-100 text-surface-700 border-surface-200'
+                        }`}
                       >
                         {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                       </select>
+                      {/* Thêm nút quản lý nhanh nếu phòng đang có khách */}
+                      {room.status === 'occupied' && (
+                        <button 
+                          onClick={() => { setSelectedOpRoom(room); setIsCheckOutOpen(true); }}
+                          className="ml-2 text-[10px] font-medium bg-primary-50 text-primary-600 px-2 py-0.5 rounded hover:bg-primary-100 transition-colors"
+                        >
+                          Quản lý
+                        </button>
+                      )}
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-1 justify-end">
@@ -253,6 +284,24 @@ export default function RoomsPage() {
           branchId={user.branch_id}
           onClose={() => setModalRoom(undefined)}
           onSaved={fetchRooms}
+        />
+      )}
+
+      {isCheckInOpen && selectedOpRoom && (
+        <CheckInModal
+          isOpen={isCheckInOpen}
+          onClose={() => { setIsCheckInOpen(false); setSelectedOpRoom(null); }}
+          selectedRoom={selectedOpRoom}
+          onCheckInSuccess={() => { setIsCheckInOpen(false); fetchRooms(); }}
+        />
+      )}
+
+      {isCheckOutOpen && selectedOpRoom && (
+        <CheckOutModal
+          isOpen={isCheckOutOpen}
+          onClose={() => { setIsCheckOutOpen(false); setSelectedOpRoom(null); }}
+          selectedRoom={selectedOpRoom}
+          onCheckOutSuccess={() => { setIsCheckOutOpen(false); fetchRooms(); }}
         />
       )}
     </div>

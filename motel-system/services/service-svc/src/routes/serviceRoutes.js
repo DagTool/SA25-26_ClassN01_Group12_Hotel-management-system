@@ -6,7 +6,8 @@ const {
   updateService,
   deleteService,
   getBookingServices,
-  addServiceToBooking
+  addServiceToBooking,
+  removeServiceFromBooking
 } = require('../controllers/serviceController')
 
 router.get('/', getServices)
@@ -16,5 +17,6 @@ router.delete('/:id', deleteService)
 
 router.get('/booking/:booking_id', getBookingServices)
 router.post('/booking/:booking_id', addServiceToBooking)
+router.delete('/booking/:booking_id/services/:id', removeServiceFromBooking)
 
 module.exports = router

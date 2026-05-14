@@ -38,7 +38,7 @@ export default function Layout() {
             <Building2 size={16} className="text-white" />
           </div>
           <div>
-            <p className="text-sm font-bold tracking-wide text-white leading-none">MotelSys</p>
+            <p className="text-sm font-bold tracking-wide text-white leading-none">Hotel System</p>
             <p className="text-[10px] text-surface-500 font-medium mt-0.5">Management</p>
           </div>
         </div>
@@ -101,7 +101,7 @@ export default function Layout() {
         {/* Topbar */}
         <header className="h-16 bg-white border-b border-surface-200 flex items-center justify-between px-8 shrink-0 z-10">
           <div className="flex items-center space-x-2">
-            <span className="text-surface-400 text-sm">MotelSys</span>
+            <span className="text-surface-400 text-sm">Hotel System</span>
             <ChevronRight size={14} className="text-surface-300" />
             <span className="text-surface-900 text-sm font-semibold">{pageTitle}</span>
           </div>

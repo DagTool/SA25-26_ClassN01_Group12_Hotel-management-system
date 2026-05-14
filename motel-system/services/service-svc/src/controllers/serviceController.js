@@ -114,11 +114,31 @@ const addServiceToBooking = async (req, res, next) => {
   }
 }
 
+const removeServiceFromBooking = async (req, res, next) => {
+  try {
+    const { booking_id, id } = req.params;
+
+    const result = await pool.query(
+      'DELETE FROM booking_services WHERE id = $1 AND booking_id = $2 RETURNING *',
+      [id, booking_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Booking service not found' });
+    }
+
+    res.json({ success: true, message: 'Service removed from booking successfully' });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getServices,
   createService,
   updateService,
   deleteService,
   getBookingServices,
-  addServiceToBooking
+  addServiceToBooking,
+  removeServiceFromBooking
 }

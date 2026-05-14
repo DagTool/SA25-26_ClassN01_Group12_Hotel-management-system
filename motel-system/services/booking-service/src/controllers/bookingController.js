@@ -113,15 +113,26 @@ const checkOut = async (req, res, next) => {
       totalRoomPrice = daysDiff * Number(roomInfo.base_price)
     }
 
-    // 4. Tính tiền dịch vụ (Ở đây giả sử booking_services lưu ở service-svc, nếu chưa có bảng booking_services thì bỏ qua tạm thời)
-    // Để đơn giản cho Giai đoạn 3, ta lấy luôn totalRoomPrice làm tổng tiền. Nếu mở rộng, có thể gọi sang service-svc.
+    // 4. Tính tiền dịch vụ
+    let totalServicePrice = 0;
+    try {
+      const servicesRes = await axios.get(`${SERVICE_SVC_URL}/booking/${booking.id}`);
+      if (servicesRes.data && servicesRes.data.success) {
+        const services = servicesRes.data.data;
+        totalServicePrice = services.reduce((sum, item) => sum + Number(item.total_price), 0);
+      }
+    } catch (err) {
+      console.error('Warning: Failed to get booking services');
+    }
+
+    const totalAmount = totalRoomPrice + totalServicePrice;
 
     // 5. Cập nhật booking
     const updateRes = await client.query(
       `UPDATE bookings 
        SET check_out = $1, status = 'completed', total_amount = $2 
        WHERE id = $3 RETURNING *`,
-      [checkOutTime, totalRoomPrice, booking.id]
+      [checkOutTime, totalAmount, booking.id]
     )
 
     // 6. Cập nhật trạng thái phòng sang 'cleaning' qua room-service
@@ -137,7 +148,9 @@ const checkOut = async (req, res, next) => {
     await client.query('COMMIT')
     res.json({ success: true, data: updateRes.rows[0], receipt: {
       stay_duration_hours: hoursDiff,
-      room_price: totalRoomPrice
+      room_price: totalRoomPrice,
+      service_price: totalServicePrice,
+      total_amount: totalAmount
     }})
 
   } catch (err) {
