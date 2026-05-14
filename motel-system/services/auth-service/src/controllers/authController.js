@@ -5,6 +5,7 @@ const { client: redisClient } = require('../redis')
 const { generateAccessToken, generateRefreshToken, verifyToken } = require('../utils/jwt')
 const jwt = require('jsonwebtoken')
 const roomDbPool = require('../roomDb')
+const { publishEvent } = require('../rabbitmq')
 
 // ── REGISTER ───────────────────────────────────────────────────
 const register = async (req, res, next) => {
@@ -35,10 +36,14 @@ const register = async (req, res, next) => {
       hotelId = uuidv4()
       branchId = uuidv4()
       const newInviteCode = 'INV-' + Math.random().toString(36).substring(2, 8).toUpperCase()
+      
+      // Set expiry to 7 days from now
+      const expiresAt = new Date()
+      expiresAt.setDate(expiresAt.getDate() + 7)
 
       // Create hotel and default branch
       await client.query('INSERT INTO hotels (id, name) VALUES ($1, $2)', [hotelId, hotelName])
-      await client.query('INSERT INTO branches (id, hotel_id, name, invite_code) VALUES ($1, $2, $3, $4)', [branchId, hotelId, 'Chi nhánh chính', newInviteCode])
+      await client.query('INSERT INTO branches (id, hotel_id, name, invite_code, invite_code_expires_at) VALUES ($1, $2, $3, $4, $5)', [branchId, hotelId, 'Chi nhánh chính', newInviteCode, expiresAt])
       
       // Auto-generate 10 rooms in room_db
       const roomClient = await roomDbPool.connect()
@@ -52,8 +57,6 @@ const register = async (req, res, next) => {
       } catch (err) {
         await roomClient.query('ROLLBACK')
         console.error('Error auto-creating rooms:', err)
-        // Note: we might fail the whole transaction or just let the user be created and log the error.
-        // Let's fail it so it is consistent.
         throw new Error('Failed to auto-create rooms')
       } finally {
         roomClient.release()
@@ -63,12 +66,18 @@ const register = async (req, res, next) => {
       if (!inviteCode) {
         return res.status(400).json({ success: false, message: 'Invite code is required for staff' })
       }
-      const branchRes = await client.query('SELECT id, hotel_id FROM branches WHERE invite_code = $1', [inviteCode])
+      const branchRes = await client.query('SELECT id, hotel_id, invite_code_expires_at FROM branches WHERE invite_code = $1', [inviteCode])
       if (branchRes.rows.length === 0) {
         return res.status(400).json({ success: false, message: 'Invalid invite code' })
       }
-      branchId = branchRes.rows[0].id
-      hotelId = branchRes.rows[0].hotel_id
+      
+      const branch = branchRes.rows[0]
+      if (branch.invite_code_expires_at && new Date() > new Date(branch.invite_code_expires_at)) {
+        return res.status(400).json({ success: false, message: 'Invite code has expired' })
+      }
+      
+      branchId = branch.id
+      hotelId = branch.hotel_id
     } else {
       return res.status(400).json({ success: false, message: 'Invalid role' })
     }
@@ -79,6 +88,17 @@ const register = async (req, res, next) => {
     )
 
     await client.query('COMMIT')
+
+    // Publish event to RabbitMQ
+    await publishEvent('auth_events', 'user.registered', {
+      userId,
+      email,
+      role,
+      hotelId,
+      branchId,
+      timestamp: new Date()
+    })
+
     res.status(201).json({ success: true, message: 'User registered successfully' })
   } catch (err) {
     await client.query('ROLLBACK')

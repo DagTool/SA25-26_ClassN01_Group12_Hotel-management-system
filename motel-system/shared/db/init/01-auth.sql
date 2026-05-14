@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS branches (
   hotel_id UUID NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   invite_code VARCHAR(50) UNIQUE,
+  invite_code_expires_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
