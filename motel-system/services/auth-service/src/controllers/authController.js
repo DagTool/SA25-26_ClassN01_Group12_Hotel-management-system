@@ -332,4 +332,66 @@ const getMe = async (req, res, next) => {
   }
 }
 
-module.exports = { register, login, refreshToken, logout, getMe }
+// ── GET BRANCH SETTINGS ───────────────────────────────────────
+const getBranchSettings = async (req, res, next) => {
+  try {
+    const authHeader = req.headers['authorization']
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Không có token' })
+    }
+    const token = authHeader.split(' ')[1]
+    const decoded = verifyToken(token)
+
+    const result = await pool.query(
+      'SELECT id, name, invite_code, invite_code_expires_at FROM branches WHERE id = $1',
+      [decoded.branch_id]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy chi nhánh' })
+    }
+
+    const branchData = result.rows[0];
+
+    // Chỉ Admin mới được xem mã mời
+    if (decoded.role !== 'admin') {
+      delete branchData.invite_code;
+      delete branchData.invite_code_expires_at;
+    }
+
+    res.json({ success: true, data: branchData })
+  } catch (err) {
+    next(err)
+  }
+}
+
+// ── REFRESH INVITE CODE ───────────────────────────────────────
+const refreshInviteCode = async (req, res, next) => {
+  try {
+    const authHeader = req.headers['authorization']
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Không có token' })
+    }
+    const token = authHeader.split(' ')[1]
+    const decoded = verifyToken(token)
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Chỉ Admin mới có quyền tạo lại mã mời' })
+    }
+
+    const newInviteCode = 'INV-' + Math.random().toString(36).substring(2, 8).toUpperCase()
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 7)
+
+    const result = await pool.query(
+      'UPDATE branches SET invite_code = $1, invite_code_expires_at = $2 WHERE id = $3 RETURNING id, name, invite_code, invite_code_expires_at',
+      [newInviteCode, expiresAt, decoded.branch_id]
+    )
+
+    res.json({ success: true, message: 'Tạo mã mời mới thành công', data: result.rows[0] })
+  } catch (err) {
+    next(err)
+  }
+}
+
+module.exports = { register, login, refreshToken, logout, getMe, getBranchSettings, refreshInviteCode }

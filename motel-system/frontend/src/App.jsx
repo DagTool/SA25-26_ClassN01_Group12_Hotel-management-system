@@ -8,6 +8,7 @@ import GuestsPage from './pages/GuestsPage';
 import RoomsPage from './pages/RoomsPage';
 import ServicesPage from './pages/ServicesPage';
 import PaymentsPage from './pages/PaymentsPage';
+import SettingsPage from './pages/SettingsPage';
 import Layout from './components/Layout';
 
 const ProtectedRoute = ({ children }) => {
@@ -36,6 +37,7 @@ function AppRoutes() {
         <Route path="rooms"    element={<RoomsPage />} />
         <Route path="services" element={<ServicesPage />} />
         <Route path="payments" element={<PaymentsPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
     </Routes>
   );

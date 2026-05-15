@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { AuthContext } from '../contexts/AuthContext';
 import {
   LayoutDashboard, Users, DoorOpen, LogOut,
-  ReceiptText, Coffee, Building2, ChevronRight
+  ReceiptText, Coffee, Building2, ChevronRight, Settings
 } from 'lucide-react';
 
 const PAGE_TITLES = {
@@ -12,6 +12,7 @@ const PAGE_TITLES = {
   '/rooms':    'Phòng & Giá',
   '/services': 'Dịch vụ',
   '/payments': 'Thanh toán',
+  '/settings': 'Cài đặt',
 };
 
 export default function Layout() {
@@ -26,6 +27,7 @@ export default function Layout() {
     { name: 'Phòng & Giá', icon: DoorOpen,        path: '/rooms' },
     { name: 'Dịch vụ',     icon: Coffee,          path: '/services' },
     { name: 'Thanh toán',  icon: ReceiptText,     path: '/payments' },
+    { name: 'Cài đặt',     icon: Settings,        path: '/settings' },
   ];
 
   return (
