@@ -3,6 +3,9 @@ const router = express.Router()
 const {
   register,
   login,
+  switchHotel,
+  createHotel,
+  getMyHotels,
   refreshToken,
   logout,
   getMe,
@@ -10,25 +13,20 @@ const {
   refreshInviteCode
 } = require('../controllers/authController')
 
-// POST /api/auth/register
+// Auth cơ bản
 router.post('/register', register)
-
-// POST /api/auth/login
 router.post('/login', login)
-
-// POST /api/auth/refresh
 router.post('/refresh', refreshToken)
-
-// POST /api/auth/logout
 router.post('/logout', logout)
-
-// GET /api/auth/me
 router.get('/me', getMe)
 
-// GET /api/auth/branch
-router.get('/branch', getBranchSettings)
+// Multi-hotel: Admin quản lý nhiều hotel
+router.get('/hotels', getMyHotels)           // Lấy danh sách hotels của admin
+router.post('/hotels', createHotel)          // Tạo hotel mới
+router.post('/switch-hotel', switchHotel)    // Chuyển sang hotel khác
 
-// POST /api/auth/branch/refresh-invite
+// Chi nhánh
+router.get('/branch', getBranchSettings)
 router.post('/branch/refresh-invite', refreshInviteCode)
 
 module.exports = router
