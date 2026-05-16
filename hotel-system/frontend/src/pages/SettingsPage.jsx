@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Settings, Copy, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Settings, Copy, RefreshCw, CheckCircle2, AlertCircle, Trash2, Loader2 } from 'lucide-react';
 import { AuthContext } from '../contexts/AuthContext';
 import api from '../services/api';
 
 export default function SettingsPage() {
-  const { user } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const [branchData, setBranchData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const [deletingHotel, setDeletingHotel] = useState(false);
 
   const fetchBranchSettings = async () => {
     try {
@@ -53,6 +54,32 @@ export default function SettingsPage() {
       alert(err.response?.data?.message || 'Lỗi kết nối máy chủ');
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  const handleDeleteHotel = async () => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa hoàn toàn khách sạn này? TẤT CẢ chi nhánh, nhân viên và dữ liệu liên quan sẽ bị xóa! Hành động này KHÔNG THỂ hoàn tác.')) {
+      return;
+    }
+    
+    const confirmText = window.prompt(`Để xác nhận, vui lòng gõ chữ "XOA" (viết hoa) vào ô bên dưới:`);
+    if (confirmText !== 'XOA') {
+      return;
+    }
+
+    setDeletingHotel(true);
+    try {
+      const response = await api.delete(`/auth/hotels/${user.hotel_id}`);
+      if (response.data.success) {
+        alert('Đã xóa khách sạn thành công. Hệ thống sẽ tiến hành đăng xuất.');
+        logout();
+      } else {
+        alert(response.data.message);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Lỗi kết nối tới máy chủ');
+    } finally {
+      setDeletingHotel(false);
     }
   };
 
@@ -132,6 +159,25 @@ export default function SettingsPage() {
                   {isExpired && ' (Đã hết hạn)'}
                 </p>
               )}
+              
+              <hr className="border-surface-200 mt-6 mb-6" />
+              
+              <div>
+                <h3 className="text-md font-semibold text-danger-600 mb-3 flex items-center">
+                  <Trash2 size={18} className="mr-2" /> Xóa khách sạn
+                </h3>
+                <p className="text-sm text-surface-500 mb-4">
+                  Hành động này sẽ xóa hoàn toàn khách sạn hiện tại, tất cả chi nhánh và dữ liệu nhân viên liên quan. Hành động này không thể hoàn tác!
+                </p>
+                <button
+                  onClick={handleDeleteHotel}
+                  disabled={deletingHotel}
+                  className="flex items-center px-4 py-2.5 bg-danger-50 text-danger-600 border border-danger-200 rounded-xl hover:bg-danger-100 hover:text-danger-700 transition-colors text-sm font-semibold disabled:opacity-70"
+                >
+                  {deletingHotel ? <Loader2 size={16} className="animate-spin mr-2" /> : <Trash2 size={16} className="mr-2" />}
+                  Xóa khách sạn này
+                </button>
+              </div>
             </div>
           ) : (
             <div>

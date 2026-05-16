@@ -499,7 +499,68 @@ const refreshInviteCode = async (req, res, next) => {
   }
 }
 
+// ── DELETE HOTEL ───────────────────────────────────────────────
+// DELETE /api/auth/hotels/:id
+const deleteHotel = async (req, res, next) => {
+  const client = await pool.connect()
+  try {
+    const authHeader = req.headers['authorization']
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Không có token' })
+    }
+    const token = authHeader.split(' ')[1]
+    const decoded = verifyToken(token)
+
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Chỉ Admin mới được xóa hotel' })
+    }
+
+    const hotelId = req.params.id
+
+    // Kiểm tra quyền admin trên hotel này
+    const access = await client.query(
+      'SELECT 1 FROM admin_hotels WHERE admin_id = $1 AND hotel_id = $2',
+      [decoded.id, hotelId]
+    )
+    if (access.rows.length === 0) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền quản lý hotel này' })
+    }
+
+    await client.query('BEGIN')
+
+    // Xóa nhân viên (staff) thuộc khách sạn này
+    await client.query("DELETE FROM users WHERE hotel_id = $1 AND role = 'staff'", [hotelId])
+    
+    // Hủy active hotel của các admin đang trỏ tới khách sạn này
+    await client.query("UPDATE users SET hotel_id = NULL, branch_id = NULL WHERE hotel_id = $1", [hotelId])
+    
+    // Xóa liên kết admin - hotel, các chi nhánh và khách sạn
+    await client.query('DELETE FROM admin_hotels WHERE hotel_id = $1', [hotelId])
+    await client.query('DELETE FROM branches WHERE hotel_id = $1', [hotelId])
+    await client.query('DELETE FROM hotels WHERE id = $1', [hotelId])
+
+    await client.query('COMMIT')
+
+    // Publish event để các service khác (room, booking, v.v.) dọn dẹp data nếu cần
+    await publishEvent('auth_events', 'hotel.deleted', {
+      adminId: decoded.id,
+      hotelId,
+      timestamp: new Date()
+    })
+
+    // Xóa cache Redis của user hiện tại
+    await redisClient.del(`user:${decoded.id}`)
+
+    res.json({ success: true, message: 'Đã xóa khách sạn thành công' })
+  } catch (err) {
+    try { await client.query('ROLLBACK') } catch (_) {}
+    next(err)
+  } finally {
+    client.release()
+  }
+}
+
 module.exports = {
   register, login, switchHotel, createHotel, getMyHotels,
-  refreshToken, logout, getMe, getBranchSettings, refreshInviteCode,
+  refreshToken, logout, getMe, getBranchSettings, refreshInviteCode, deleteHotel,
 }

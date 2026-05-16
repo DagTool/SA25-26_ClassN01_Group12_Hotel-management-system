@@ -10,7 +10,8 @@ const {
   logout,
   getMe,
   getBranchSettings,
-  refreshInviteCode
+  refreshInviteCode,
+  deleteHotel
 } = require('../controllers/authController')
 
 // Auth cơ bản
@@ -24,6 +25,10 @@ router.get('/me', getMe)
 router.get('/hotels', getMyHotels)           // Lấy danh sách hotels của admin
 router.post('/hotels', createHotel)          // Tạo hotel mới
 router.post('/switch-hotel', switchHotel)    // Chuyển sang hotel khác
+
+// DELETE: Xóa khách sạn
+router.delete('/hotels/:id', deleteHotel);
+
 
 // Chi nhánh
 router.get('/branch', getBranchSettings)
