@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3001
 app.use(cors())
 app.use(express.json())
 
-// Health check (Chương 8: Tính chịu lỗi)
+// Tính chịu lỗi
 app.get('/health', async (req, res) => {
   try {
     await pool.query('SELECT 1')

@@ -1,0 +1,51 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: auth-service
+    url: http://auth-service:3001
+    routes:
+      - name: auth-route
+        paths:
+          - /api/auth
+        strip_path: false
+
+  - name: room-service
+    url: http://room-service:3002
+    routes:
+      - name: room-route
+        paths:
+          - /api/rooms
+        strip_path: false
+
+  - name: service-svc
+    url: http://service-svc:3003
+    routes:
+      - name: service-route
+        paths:
+          - /api/services
+        strip_path: false
+
+  - name: guest-service
+    url: http://guest-service:3004
+    routes:
+      - name: guest-route
+        paths:
+          - /api/guests
+        strip_path: false
+
+  - name: booking-service
+    url: http://booking-service:3005
+    routes:
+      - name: booking-route
+        paths:
+          - /api/bookings
+        strip_path: false
+
+  - name: payment-service
+    url: http://payment-service:3006
+    routes:
+      - name: payment-route
+        paths:
+          - /api/payments
+        strip_path: false

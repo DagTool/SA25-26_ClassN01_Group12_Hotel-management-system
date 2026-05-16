@@ -1,119 +1,76 @@
+name: motel-system
+
+# ─── Volumes ───────────────────────────────────────────────────────────────────
+volumes:
+  pg_data:
+  redis_data:
+  rabbitmq_data:
+
+# ─── Networks ──────────────────────────────────────────────────────────────────
 networks:
   motel-net:
     driver: bridge
 
-volumes:
-  pg_app_data:
-  pg_kong_data:
-  redis_data:
-  rabbitmq_data:
-
+# ─── Services ──────────────────────────────────────────────────────────────────
 services:
 
-  kong-db:
+  # ══════════════════════════════════════════════════════════════════
+  # INFRASTRUCTURE
+  # ══════════════════════════════════════════════════════════════════
+
+  # PostgreSQL — chứa TẤT CẢ databases (auth_db, room_db, guest_db,
+  # booking_db, payment_db, inventory_db) trong 1 instance duy nhất.
+  # Script 00-init-dbs.sh tạo các DB, các file .sql sau tạo tables.
+  postgres:
     image: postgres:16-alpine
-    container_name: kong-db
-    environment:
-      POSTGRES_DB: kong
-      POSTGRES_USER: kong
-      POSTGRES_PASSWORD: kongpass
-    volumes:
-      - pg_kong_data:/var/lib/postgresql/data
-    networks:
-      - motel-net
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "kong"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  kong-migration:
-    image: kong:3.6
-    container_name: kong-migration
-    command: kong migrations bootstrap
-    environment:
-      KONG_DATABASE: postgres
-      KONG_PG_HOST: kong-db
-      KONG_PG_DATABASE: kong
-      KONG_PG_USER: kong
-      KONG_PG_PASSWORD: kongpass
-    networks:
-      - motel-net
-    depends_on:
-      kong-db:
-        condition: service_healthy
-    restart: on-failure
-
-  kong:
-    image: kong:3.6
-    container_name: kong
-    environment:
-      KONG_DATABASE: postgres
-      KONG_PG_HOST: kong-db
-      KONG_PG_DATABASE: kong
-      KONG_PG_USER: kong
-      KONG_PG_PASSWORD: kongpass
-      KONG_PROXY_ACCESS_LOG: /dev/stdout
-      KONG_ADMIN_ACCESS_LOG: /dev/stdout
-      KONG_PROXY_ERROR_LOG: /dev/stderr
-      KONG_ADMIN_ERROR_LOG: /dev/stderr
-      KONG_ADMIN_LISTEN: "0.0.0.0:8001"
-      KONG_PROXY_LISTEN: "0.0.0.0:8000"
-    ports:
-      - "8000:8000"
-      - "8001:8001"
-    networks:
-      - motel-net
-    depends_on:
-      kong-db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "kong", "health"]
-      interval: 10s
-      timeout: 10s
-      retries: 10
+    container_name: motel-postgres
     restart: unless-stopped
-
-  app-db:
-    image: postgres:16-alpine
-    container_name: app-db
     environment:
-      POSTGRES_DB: motel_db
-      POSTGRES_USER: motel_user
+      POSTGRES_DB:       motel_db
+      POSTGRES_USER:     motel_user
       POSTGRES_PASSWORD: motelpass
     ports:
-      - "5433:5432"
+      - "5433:5432"          # 5433 để không đụng PostgreSQL local
     volumes:
-      - pg_app_data:/var/lib/postgresql/data
-      - ./shared/db/init:/docker-entrypoint-initdb.d
+      - pg_data:/var/lib/postgresql/data
+      - ./shared/db/init:/docker-entrypoint-initdb.d:ro
     networks:
       - motel-net
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "motel_user", "-d", "motel_db"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 15
 
+  # Redis — cache JWT / session
   redis:
     image: redis:7-alpine
-    container_name: redis
+    container_name: motel-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --loglevel warning
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
       - motel-net
-    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
+  # RabbitMQ — message broker (auth events)
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    container_name: rabbitmq
+    container_name: motel-rabbitmq
+    restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: motel
       RABBITMQ_DEFAULT_PASS: motelpass
     ports:
       - "5672:5672"
-      - "15672:15672"
+      - "15672:15672"    # Management UI: http://localhost:15672
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
@@ -122,4 +79,200 @@ services:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
       timeout: 10s
+      retries: 15
+
+  # Kong — DB-less mode với declarative config (không cần kong-db, không cần migration)
+  kong:
+    image: kong:3.6
+    container_name: motel-kong
+    restart: unless-stopped
+    environment:
+      KONG_DATABASE:           "off"
+      KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
+      KONG_PROXY_LISTEN:       "0.0.0.0:8000"
+      KONG_ADMIN_LISTEN:       "0.0.0.0:8001"
+      KONG_PROXY_ACCESS_LOG:   /dev/stdout
+      KONG_ADMIN_ACCESS_LOG:   /dev/stdout
+      KONG_PROXY_ERROR_LOG:    /dev/stderr
+      KONG_ADMIN_ERROR_LOG:    /dev/stderr
+    ports:
+      - "8000:8000"    # API Gateway — frontend trỏ vào đây
+      - "8001:8001"    # Kong Admin API
+    volumes:
+      - ./kong/kong.yml:/etc/kong/kong.yml:ro
+    networks:
+      - motel-net
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+
+  # ══════════════════════════════════════════════════════════════════
+  # MICROSERVICES
+  # ══════════════════════════════════════════════════════════════════
+
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: motel-auth
+    restart: unless-stopped
+    environment:
+      PORT:              3001
+      DATABASE_URL:      postgresql://motel_user:motelpass@postgres:5432/auth_db
+      ROOM_DATABASE_URL: postgresql://motel_user:motelpass@postgres:5432/room_db
+      REDIS_URL:         redis://redis:6379
+      RABBITMQ_URL:      amqp://motel:motelpass@rabbitmq:5672
+      JWT_SECRET:        super_secret_jwt_key_change_in_production
+      JWT_EXPIRES_IN:    15m
+      REFRESH_TOKEN_EXPIRES_IN: 7d
+    networks:
+      - motel-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
       retries: 10
+      start_period: 15s
+
+  room-service:
+    build:
+      context: ./services/room-service
+      dockerfile: Dockerfile
+    container_name: motel-room
+    restart: unless-stopped
+    environment:
+      PORT:         3002
+      DATABASE_URL: postgresql://motel_user:motelpass@postgres:5432/room_db
+    networks:
+      - motel-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  service-svc:
+    build:
+      context: ./services/service-svc
+      dockerfile: Dockerfile
+    container_name: motel-service-svc
+    restart: unless-stopped
+    environment:
+      PORT:         3003
+      DATABASE_URL: postgresql://motel_user:motelpass@postgres:5432/inventory_db
+    networks:
+      - motel-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  guest-service:
+    build:
+      context: ./services/guest-service
+      dockerfile: Dockerfile
+    container_name: motel-guest
+    restart: unless-stopped
+    environment:
+      PORT:         3004
+      DATABASE_URL: postgresql://motel_user:motelpass@postgres:5432/guest_db
+    networks:
+      - motel-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3004/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  booking-service:
+    build:
+      context: ./services/booking-service
+      dockerfile: Dockerfile
+    container_name: motel-booking
+    restart: unless-stopped
+    environment:
+      PORT:             3005
+      DATABASE_URL:     postgresql://motel_user:motelpass@postgres:5432/booking_db
+      ROOM_SERVICE_URL: http://room-service:3002/api/rooms
+      SERVICE_SVC_URL:  http://service-svc:3003/api/services
+    networks:
+      - motel-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      room-service:
+        condition: service_healthy
+      service-svc:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3005/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+    container_name: motel-payment
+    restart: unless-stopped
+    environment:
+      PORT:                3006
+      DATABASE_URL:        postgresql://motel_user:motelpass@postgres:5432/payment_db
+      BOOKING_SERVICE_URL: http://booking-service:3005/api/bookings
+      SERVICE_SVC_URL:     http://service-svc:3003/api/services
+    networks:
+      - motel-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      booking-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3006/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ══════════════════════════════════════════════════════════════════
+  # FRONTEND  (React + Vite → build → Nginx)
+  # ══════════════════════════════════════════════════════════════════
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: motel-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"    # Mở http://localhost:3000
+    networks:
+      - motel-net
+    depends_on:
+      - kong
+    environment:
+      # Build-time env (được Vite nhúng vào bundle)
+      VITE_API_URL: http://localhost:8000/api

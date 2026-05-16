@@ -40,7 +40,18 @@ const checkIn = async (req, res, next) => {
 
     await client.query('BEGIN')
 
-    // 1. Cập nhật trạng thái phòng sang 'occupied' qua room-service
+    // 1. Khóa giao dịch cho phòng này bằng PostgreSQL Advisory Lock
+    // Đảm bảo hàng ngàn request cùng lúc vào cùng 1 room_id sẽ được xử lý tuần tự, chống Double Booking
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1::text))', [room_id])
+
+    // Kiểm tra xem phòng này đã có booking nào đang active chưa
+    const existingBooking = await client.query(`SELECT id FROM bookings WHERE room_id = $1 AND status = 'active'`, [room_id])
+    if (existingBooking.rows.length > 0) {
+      await client.query('ROLLBACK')
+      return res.status(409).json({ success: false, message: 'Phòng này đang được sử dụng (Double Booking)' })
+    }
+
+    // 2. Cập nhật trạng thái phòng sang 'occupied' qua room-service
     // Phải gọi API sang room-service để đảm bảo logic phân tán
     try {
       await axios.patch(`${ROOM_SERVICE_URL}/${room_id}/status`, {
@@ -50,7 +61,7 @@ const checkIn = async (req, res, next) => {
       throw new Error('Failed to update room status. Room might be unavailable.')
     }
 
-    // 2. Tạo record Booking mới
+    // 3. Tạo record Booking mới
     const result = await client.query(
       `INSERT INTO bookings (branch_id, room_id, guest_id, created_by, booking_type, check_in, status)
        VALUES ($1, $2, $3, $4, $5, NOW(), 'active') RETURNING *`,
