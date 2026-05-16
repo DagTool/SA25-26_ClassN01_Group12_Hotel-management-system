@@ -20,7 +20,8 @@ export default function Login() {
     try {
       const res = await api.post('/auth/login', { username, password });
       if (res.data.success) {
-        login(res.data.data.user, res.data.data.accessToken);
+        const { user, accessToken, refreshToken, hotels } = res.data.data;
+        login(user, accessToken, refreshToken, hotels || []);
         navigate('/');
       } else {
         setError(res.data.message || 'Đăng nhập thất bại');

@@ -5,6 +5,7 @@ import {
   LayoutDashboard, Users, DoorOpen, LogOut,
   ReceiptText, Coffee, Building2, ChevronRight, Settings
 } from 'lucide-react';
+import HotelSwitcher from './HotelSwitcher';
 
 const PAGE_TITLES = {
   '/':         'Sơ đồ phòng',
@@ -44,6 +45,16 @@ export default function Layout() {
             <p className="text-[10px] text-surface-500 font-medium mt-0.5">Management</p>
           </div>
         </div>
+
+        {/* Hotel Switcher — chỉ hiện với Admin */}
+        {user?.role === 'admin' && (
+          <div className="px-3 py-2 border-b border-surface-800/60">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-surface-600 mb-1.5 px-1">
+              Hotel đang quản lý
+            </p>
+            <HotelSwitcher />
+          </div>
+        )}
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
@@ -109,7 +120,7 @@ export default function Layout() {
           </div>
           <div className="flex items-center gap-3">
             <div className="text-xs text-surface-500 bg-surface-100 px-3 py-1.5 rounded-lg font-mono">
-              {user?.branch_id?.substring(0, 8)}…
+              Branch: {user?.branch_id?.substring(0, 8)}…
             </div>
           </div>
         </header>
