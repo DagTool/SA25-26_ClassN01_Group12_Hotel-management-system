@@ -19,10 +19,12 @@ CREATE TABLE IF NOT EXISTS branches (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- users.hotel_id / branch_id vẫn giữ để tương thích ngược (dùng cho staff).
+-- Admin có thể quản lý nhiều hotel qua bảng admin_hotels bên dưới.
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  hotel_id UUID REFERENCES hotels(id) ON DELETE SET NULL,
-  branch_id UUID REFERENCES branches(id) ON DELETE SET NULL,
+  hotel_id UUID REFERENCES hotels(id) ON DELETE SET NULL,   -- hotel hiện tại đang chọn (active context)
+  branch_id UUID REFERENCES branches(id) ON DELETE SET NULL, -- branch hiện tại đang chọn (active context)
   username VARCHAR(255) UNIQUE NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
@@ -30,6 +32,18 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Quan hệ nhiều-nhiều: 1 admin có thể sở hữu / quản lý nhiều hotel
+CREATE TABLE IF NOT EXISTS admin_hotels (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  admin_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  hotel_id UUID NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (admin_id, hotel_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_hotels_admin_id ON admin_hotels(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_hotels_hotel_id ON admin_hotels(hotel_id);
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
